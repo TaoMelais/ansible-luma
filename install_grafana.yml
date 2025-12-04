@@ -73,19 +73,15 @@
 
     - name: Exécuter Grafana directement pour voir les erreurs
       shell: |
-        /usr/share/grafana/bin/grafana server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini --pidfile=/var/run/grafana/grafana-server.pid &
+        /usr/share/grafana/bin/grafana server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini --pidfile=/var/run/grafana/grafana-server.pid > /dev/null 2>&1 &
       ignore_errors: yes
 
     - name: Vérifier les logs détaillés de Grafana
       shell: |
-        sleep 5
-        /usr/share/grafana/bin/grafana server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini 2>&1 | head -50
+        sleep 3
+        /usr/share/grafana/bin/grafana server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini 2>&1 | head -20
       register: grafana_output
       ignore_errors: yes
-
-    - name: Afficher la sortie de Grafana
-      debug:
-        msg: "{{ grafana_output.stdout_lines }}"
 
     - name: Modifier le fichier de service Grafana pour ajouter le homepath
       lineinfile:
