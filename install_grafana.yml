@@ -88,13 +88,14 @@
 
     - name: Attendre que Grafana soit disponible
       wait_for:
+        host: "{{ grafana_ip }}"
         port: "{{ grafana_port }}"
         delay: 5
         timeout: 60
 
     - name: Afficher l'URL de Grafana
       debug:
-        msg: "Grafana est accessible sur http://{{ ansible_host }}:{{ grafana_port }}"
+        msg: "Grafana est accessible sur http://{{ grafana_ip }}:{{ grafana_port }}"
 
   handlers:
     - name: Redémarrer Grafana
