@@ -73,19 +73,32 @@
 
     - name: Exécuter Grafana directement pour voir les erreurs
       shell: |
-        /usr/share/grafana/bin/grafana server --config=/etc/grafana/grafana.ini --pidfile=/var/run/grafana/grafana-server.pid &
+        /usr/share/grafana/bin/grafana server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini --pidfile=/var/run/grafana/grafana-server.pid &
       ignore_errors: yes
 
     - name: Vérifier les logs détaillés de Grafana
       shell: |
         sleep 5
-        /usr/share/grafana/bin/grafana server --config=/etc/grafana/grafana.ini 2>&1 | head -50
+        /usr/share/grafana/bin/grafana server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini 2>&1 | head -50
       register: grafana_output
       ignore_errors: yes
 
     - name: Afficher la sortie de Grafana
       debug:
         msg: "{{ grafana_output.stdout_lines }}"
+
+    - name: Modifier le fichier de service Grafana pour ajouter le homepath
+      lineinfile:
+        path: /lib/systemd/system/grafana-server.service
+        regexp: "^ExecStart="
+        line: "ExecStart=/usr/share/grafana/bin/grafana server --homepath=/usr/share/grafana --config=${CONF_FILE} --pidfile=${PID_FILE_DIR}/grafana-server.pid --packaging=deb cfg:default.paths.logs=${LOG_DIR} cfg:default.paths.data=${DATA_DIR} cfg:default.paths.plugins=${PLUGINS_DIR} cfg:default.paths.provisioning=${PROVISIONING_CFG_DIR}"
+        backup: yes
+      notify: Redémarrer Grafana
+
+    - name: Recharger systemd et redémarrer Grafana
+      shell: |
+        systemctl daemon-reload
+        systemctl restart grafana-server
 
     - name: Créer le répertoire de configuration
       file:
