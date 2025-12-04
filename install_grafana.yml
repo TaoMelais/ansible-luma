@@ -56,6 +56,19 @@
         chmod -R 755 /var/log/grafana
         chmod -R 755 /etc/grafana
 
+    - name: Modifier le service Grafana pour LXC (désactiver les namespaces)
+      shell: |
+        mkdir -p /etc/systemd/system/grafana-server.service.d
+        cat > /etc/systemd/system/grafana-server.service.d/override.conf << EOF
+        [Service]
+        PrivateDevices=no
+        PrivateTmp=no
+        NoNewPrivileges=no
+        ProtectSystem=no
+        ProtectHome=no
+        EOF
+        systemctl daemon-reload
+
     - name: Créer le répertoire de configuration
       file:
         path: /etc/grafana
