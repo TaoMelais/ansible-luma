@@ -1,17 +1,16 @@
 ---
 # Variables Grafana - Personnalisez selon vos besoins
 grafana_version: "latest"
-grafana_ip: "172.16.1.56"  # IP du container/machine Grafana
+grafana_ip: "172.16.1.55"  # IP du container/machine Grafana
 grafana_port: 3000
-grafana_admin_user: "admin"
-grafana_admin_password: "juqRyj-zyhmib-muddi3"
+
 
 # Variables d'environnement supplémentaires pour Grafana
 grafana_env_vars:
   GF_AUTH_ANONYMOUS_ENABLED: "false"
   GF_USERS_ALLOW_SIGN_UP: "false"
   GF_USERS_DEFAULT_THEME: "dark"
-  GF_SERVER_ROOT_URL: "http://172.16.1.56:3000"
+  GF_SERVER_ROOT_URL: "http://172.16.1.55:3000"
   GF_DATABASE_TYPE: "sqlite3"
   GF_ANALYTICS_REPORTING_ENABLED: "false"
   GF_SECURITY_DISABLE_GRAVATAR: "false"
