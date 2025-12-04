@@ -1,0 +1,105 @@
+---
+- name: Installer Grafana sur container Proxmox
+  hosts: grafana_container
+  become: yes
+  vars_files:
+    - vars.yml
+    
+  tasks:
+    - name: Mettre à jour le cache APT
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Installer les dépendances
+      apt:
+        name:
+          - apt-transport-https
+          - ldap-utils
+          - wget
+          - gnupg2
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Ajouter la clé GPG de Grafana
+      shell: |
+        wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | tee /usr/share/keyrings/grafana-archive-keyring.gpg > /dev/null
+      args:
+        creates: /usr/share/keyrings/grafana-archive-keyring.gpg
+      when: ansible_os_family == "Debian"
+
+    - name: Ajouter le dépôt Grafana
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/grafana-archive-keyring.gpg] https://apt.grafana.com stable main"
+        state: present
+        filename: grafana
+      when: ansible_os_family == "Debian"
+
+    - name: Installer Grafana
+      apt:
+        name: grafana
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Créer le répertoire de configuration
+      file:
+        path: /etc/grafana
+        state: directory
+        mode: '0755'
+
+    - name: Copier le fichier custom.ini
+      copy:
+        src: custom.ini
+        dest: /etc/grafana/grafana.ini
+        owner: grafana
+        group: grafana
+        mode: '0640'
+      notify: Redémarrer Grafana
+
+    - name: Configurer Grafana avec les variables d'environnement
+      lineinfile:
+        path: /etc/default/grafana-server
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        create: yes
+      loop:
+        - { regexp: '^GF_SECURITY_ADMIN_USER=', line: 'GF_SECURITY_ADMIN_USER={{ grafana_admin_user }}' }
+        - { regexp: '^GF_SECURITY_ADMIN_PASSWORD=', line: 'GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}' }
+        - { regexp: '^GF_SERVER_HTTP_PORT=', line: 'GF_SERVER_HTTP_PORT={{ grafana_port }}' }
+      notify: Redémarrer Grafana
+
+    - name: Configurer les variables d'environnement supplémentaires
+      lineinfile:
+        path: /etc/default/grafana-server
+        regexp: "^{{ item.key }}="
+        line: "{{ item.key }}={{ item.value }}"
+        create: yes
+      loop: "{{ grafana_env_vars | dict2items }}"
+      notify: Redémarrer Grafana
+
+    - name: Activer et démarrer le service Grafana
+      systemd:
+        name: grafana-server
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Attendre que Grafana soit disponible
+      wait_for:
+        port: "{{ grafana_port }}"
+        delay: 5
+        timeout: 60
+
+    - name: Afficher l'URL de Grafana
+      debug:
+        msg: "Grafana est accessible sur http://{{ ansible_host }}:{{ grafana_port }}"
+
+  handlers:
+    - name: Redémarrer Grafana
+      systemd:
+        name: grafana-server
+        state: restarted
+
+    
