@@ -43,6 +43,19 @@
         update_cache: yes
       when: ansible_os_family == "Debian"
 
+    - name: Corriger les permissions et la configuration Grafana pour LXC/Docker
+      shell: |
+        # Créer les répertoires nécessaires avec les bonnes permissions
+        mkdir -p /var/lib/grafana
+        mkdir -p /var/log/grafana
+        mkdir -p /etc/grafana/provisioning
+        chown -R grafana:grafana /var/lib/grafana
+        chown -R grafana:grafana /var/log/grafana
+        chown -R grafana:grafana /etc/grafana
+        chmod -R 755 /var/lib/grafana
+        chmod -R 755 /var/log/grafana
+        chmod -R 755 /etc/grafana
+
     - name: Créer le répertoire de configuration
       file:
         path: /etc/grafana
