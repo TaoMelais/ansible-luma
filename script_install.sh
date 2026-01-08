@@ -22,3 +22,16 @@ pip install netaddr ansible
 
 # Exécuter le playbook Ansible
 ansible-playbook install_grafana.yml
+
+# Vérifications après installation
+echo "=== Vérification de Grafana ==="
+sleep 5
+systemctl status grafana-server || echo "⚠️ Grafana not running"
+
+echo ""
+echo "=== Vérification du port 3000 ==="
+ss -tlnp | grep 3000 || echo "⚠️ Port 3000 not listening"
+
+echo ""
+echo "=== Derniers logs Grafana ==="
+journalctl -u grafana-server -n 20 --no-pager
