@@ -1,5 +1,30 @@
 # Installation Grafana sur Container Proxmox
 
+apt update
+apt upgrade -y
+apt install curl -y
+curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/heads/main/script_install.sh
+. script_install.sh
+
+
+
+# Fonctionnement
+
+Récupération de script_install.sh depuis github via curl.
+Il execute le script_install.sh.
+
+Le script_install.sh va :
+    - installer des dépendances
+    - configurer la locale
+    - cloner le repo ansible
+    - creer un .env
+    - execute install_grafana.yml avec ansible
+
+
+
+---- OLD -----
+
+
 ## Prérequis
 
 1. Container Proxmox créé et accessible via SSH

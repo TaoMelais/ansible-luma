@@ -1,12 +1,5 @@
-#!/bin/bash
-set -e
-
-# Mise à jour du système
-apt update
-apt upgrade -y
-
 # Installation des dépendances
-apt install -y sudo curl wget gnupg lsb-release git locales python3 python3-pip python3-venv ansible
+apt install -y sudo wget gnupg lsb-release git locales python3 python3-pip python3-venv ansible
 
 # Configuration de la locale
 sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
@@ -29,17 +22,3 @@ pip install netaddr ansible
 
 # Exécuter le playbook Ansible
 ansible-playbook install_grafana.yml
-
-# Vérifications après installation
-echo "=== Vérification de Grafana ==="
-sleep 5
-systemctl status grafana-server || echo "⚠️ Grafana not running"
-
-echo ""
-echo "=== Vérification du port 3000 ==="
-ss -tlnp | grep 3000 || echo "⚠️ Port 3000 not listening"
-
-echo ""
-echo "=== Derniers logs Grafana ==="
-journalctl -u grafana-server -n 20 --no-pager
-
