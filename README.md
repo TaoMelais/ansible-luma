@@ -4,7 +4,7 @@
 apt update
 apt upgrade -y
 apt install curl -y
-curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/heads/main/grafana/script_install.sh
+curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/tags/v0.0.1/grafana/script_install.sh
 . script_install.sh
 ```
 
@@ -15,7 +15,7 @@ curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-lu
 apt update
 apt upgrade -y
 apt install curl -y
-curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/heads/main/prometheus/script_install.sh
+curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/tags/v0.0.1/prometheus/script_install.sh
 . script_install.sh
 ```
 
