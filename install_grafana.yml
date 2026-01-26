@@ -57,19 +57,26 @@
         chmod -R 755 /etc/grafana
 
     - name: Modifier le service Grafana pour LXC (désactiver les namespaces)
-      shell: |
-        mkdir -p /etc/systemd/system/grafana-server.service.d
-        cat > /etc/systemd/system/grafana-server.service.d/override.conf << EOF
-        [Service]
-        PrivateDevices=no
-        PrivateTmp=no
-        NoNewPrivileges=no
-        ProtectSystem=no
-        ProtectHome=no
-        RestartSec=5
-        Restart=always
-        EOF
-        systemctl daemon-reload
+      file:
+        path: /etc/systemd/system/grafana-server.service.d
+        state: directory
+        mode: '0755'
+
+    - name: Ajouter override systemd pour Grafana (LXC-friendly + EnvironmentFile)
+      blockinfile:
+        path: /etc/systemd/system/grafana-server.service.d/override.conf
+        create: yes
+        block: |
+          [Service]
+          PrivateDevices=no
+          PrivateTmp=no
+          NoNewPrivileges=no
+          ProtectSystem=no
+          ProtectHome=no
+          RestartSec=5
+          Restart=always
+          EnvironmentFile=/etc/default/grafana-server
+      notify: Redémarrer Grafana
 
     - name: Exécuter Grafana directement pour voir les erreurs
       shell: |
@@ -118,16 +125,16 @@
         line: "{{ item.line }}"
         create: yes
       loop:
-        - { regexp: '^GF_SECURITY_ADMIN_USER=', line: 'GF_SECURITY_ADMIN_USER={{ grafana_admin_user }}' }
-        - { regexp: '^GF_SECURITY_ADMIN_PASSWORD=', line: 'GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}' }
-        - { regexp: '^GF_SERVER_HTTP_PORT=', line: 'GF_SERVER_HTTP_PORT={{ grafana_port }}' }
+        - { regexp: '^GF_SECURITY_ADMIN_USER=', line: 'GF_SECURITY_ADMIN_USER="{{ grafana_admin_user }}"' }
+        - { regexp: '^GF_SECURITY_ADMIN_PASSWORD=', line: 'GF_SECURITY_ADMIN_PASSWORD="{{ grafana_admin_password }}"' }
+        - { regexp: '^GF_SERVER_HTTP_PORT=', line: 'GF_SERVER_HTTP_PORT="{{ grafana_port }}"' }
       notify: Redémarrer Grafana
 
     - name: Ajouter les variables d'environnement dans le fichier systemd
       lineinfile:
         path: /etc/systemd/system/grafana-server.service.d/override.conf
-        regexp: "^Environment="
-        line: "Environment=\"GF_SECURITY_ADMIN_USER={{ grafana_admin_user }}\" \"GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}\""
+        regexp: "^EnvironmentFile="
+        line: "EnvironmentFile=/etc/default/grafana-server"
         create: yes
 
     - name: Redémarrer systemd pour charger les nouvelles variables
