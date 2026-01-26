@@ -1,0 +1,101 @@
+---
+- name: Installer Loki sur container Proxmox
+  hosts: loki_container
+  become: yes
+  vars_files:
+    - loki/vars.yml
+
+  tasks:
+    - name: Mettre à jour le cache APT
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+
+    - name: Installer dépendances
+      apt:
+        name:
+          - wget
+          - unzip
+          - ca-certificates
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Créer utilisateur système Loki
+      user:
+        name: "{{ loki_user }}"
+        system: yes
+        create_home: no
+        shell: /sbin/nologin
+
+    - name: Créer répertoires Loki
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ loki_user }}"
+        group: "{{ loki_group }}"
+        mode: '0755'
+      loop:
+        - "{{ loki_config_dir }}"
+        - "{{ loki_data_dir }}"
+        - "{{ loki_log_dir }}"
+
+    - name: Télécharger Loki archive
+      get_url:
+        url: "https://github.com/grafana/loki/releases/download/v{{ loki_version }}/loki-{{ loki_version }}.linux-amd64.zip"
+        dest: "/tmp/loki-{{ loki_version }}.zip"
+        mode: '0644'
+
+    - name: Décompresser Loki
+      unarchive:
+        src: "/tmp/loki-{{ loki_version }}.zip"
+        dest: /opt
+        remote_src: yes
+
+    - name: Installer binaire Loki
+      copy:
+        remote_src: yes
+        src: "/opt/loki-{{ loki_version }}.linux-amd64/loki"
+        dest: /usr/local/bin/loki
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Copier configuration Loki
+      copy:
+        src: loki/loki-config.yaml
+        dest: "{{ loki_config_dir }}/loki-config.yaml"
+        owner: "{{ loki_user }}"
+        group: "{{ loki_group }}"
+        mode: '0644'
+      notify: Reload systemd
+
+    - name: Copier unité systemd Loki
+      copy:
+        src: loki/loki.service
+        dest: /etc/systemd/system/loki.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload systemd
+
+    - name: Activer et démarrer Loki
+      systemd:
+        name: loki
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Attendre que Loki écoute sur le port 3100
+      wait_for:
+        port: 3100
+        delay: 3
+        timeout: 30
+
+    - name: Afficher URL Loki
+      debug:
+        msg: "Loki accessible sur http://{{ ansible_host | default(inventory_hostname) }}:3100"
+
+  handlers:
+    - name: Reload systemd
+      command: systemctl daemon-reload
