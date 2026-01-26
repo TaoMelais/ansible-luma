@@ -21,7 +21,7 @@ pip install --upgrade pip
 pip install netaddr ansible
 
 # Exécuter le playbook Ansible
-ansible-playbook install_prometheus.yml
+ansible-playbook 02-install_prometheus.yml
 
 # Vérifications après installation
 echo "=== Vérification de Prometheus ==="
@@ -32,5 +32,5 @@ echo ""
 echo "=== Vérification du port 9090 ==="
 ss -tlnp | grep 9090 || echo "⚠️ Port 9090 not listening"
 echo ""
-echo "=== Derniers logs Grafana ==="
-journalctl -u grafana-server -n 20 --no-pager
+echo "=== Derniers logs Prometheus ==="
+journalctl -u prometheus -n 20 --no-pager

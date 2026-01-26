@@ -21,7 +21,7 @@ pip install --upgrade pip
 pip install netaddr ansible
 
 # Exécuter le playbook Ansible
-ansible-playbook install_grafana.yml
+ansible-playbook 00-install_grafana.yml
 
 # Vérifications après installation
 echo "=== Vérification de Grafana ==="

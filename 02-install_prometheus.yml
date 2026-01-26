@@ -1,0 +1,135 @@
+---
+- name: Installer Prometheus sur container Proxmox
+  hosts: prometheus_container
+  become: yes
+  vars_files:
+    - prometheus/vars.yml
+
+
+  tasks:
+    - name: Mettre à jour le cache APT
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Installer les dépendances
+      apt:
+        name:
+          - wget
+          - tar
+          - gzip
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Créer l'utilisateur système Prometheus
+      user:
+        name: "{{ prometheus_user }}"
+        system: yes
+        shell: /sbin/nologin
+        create_home: no
+
+    - name: Créer les répertoires Prometheus
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+        mode: '0755'
+      loop:
+        - "{{ prometheus_config_dir }}"
+        - "{{ prometheus_data_dir }}"
+        - "{{ prometheus_install_dir }}"
+
+    - name: Télécharger l'archive Prometheus
+      get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/prometheus-{{ prometheus_version }}.tar.gz"
+        mode: '0644'
+      register: download_prometheus
+
+    - name: Décompresser Prometheus
+      unarchive:
+        src: "/tmp/prometheus-{{ prometheus_version }}.tar.gz"
+        dest: "{{ prometheus_install_dir }}"
+        remote_src: yes
+
+    - name: Copier les binaires Prometheus vers /usr/local/bin
+      copy:
+        remote_src: yes
+        src: "{{ prometheus_install_dir }}/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - prometheus
+        - promtool
+
+    - name: Déplacer les fichiers de configuration vers /etc/prometheus
+      copy:
+        remote_src: yes
+        src: "{{ prometheus_install_dir }}/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+        dest: "{{ prometheus_config_dir }}/{{ item }}"
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+        mode: '0644'
+      loop:
+        - consoles
+        - console_libraries
+
+    - name: Copier le fichier de configuration fourni
+      copy:
+        src: prometheus/prometheus.yml
+        dest: "{{ prometheus_config_dir }}/prometheus.yml"
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+        mode: '0644'
+      notify: Redémarrer Prometheus
+
+    - name: Fixer les permissions des répertoires Prometheus
+      file:
+        path: "{{ item }}"
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+        recurse: yes
+      loop:
+        - "{{ prometheus_config_dir }}"
+        - "{{ prometheus_data_dir }}"
+        - "{{ prometheus_install_dir }}/prometheus-{{ prometheus_version }}.linux-amd64"
+
+    - name: Installer l'unité systemd pour Prometheus
+      copy:
+        src: prometheus/prometheus.service
+        dest: /etc/systemd/system/prometheus.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload systemd
+
+    - name: Recharger systemd et démarrer Prometheus
+      systemd:
+        name: prometheus
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Attendre que Prometheus réponde
+      wait_for:
+        host: 0.0.0.0
+        port: "{{ prometheus_port }}"
+        delay: 5
+        timeout: 60
+
+    - name: Afficher l'URL de Prometheus
+      debug:
+        msg: "Prometheus est accessible sur http://{{ ansible_host | default(inventory_hostname) }}:{{ prometheus_port }}"
+
+  handlers:
+    - name: Redémarrer Prometheus
+      systemd:
+        name: prometheus
+        state: restarted
+
+    - name: Reload systemd
+      command: systemctl daemon-reload

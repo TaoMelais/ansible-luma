@@ -3,7 +3,7 @@
   hosts: grafana_container
   become: yes
   vars_files:
-    - vars.yml
+    - grafana/vars.yml
     
   tasks:
     - name: Mettre à jour le cache APT
@@ -111,7 +111,7 @@
 
     - name: Copier le fichier custom.ini
       copy:
-        src: custom.ini
+        src: grafana/custom.ini
         dest: /etc/grafana/grafana.ini
         owner: grafana
         group: grafana
