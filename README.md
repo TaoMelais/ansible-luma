@@ -7,6 +7,16 @@ curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-lu
 . script_install.sh
 
 
+# Installation Prometheus sur Container Proxmox
+
+apt update
+apt upgrade -y
+apt install curl -y
+curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/heads/main/script_install.sh
+. script_install.sh
+
+
+
 
 # Fonctionnement
 
