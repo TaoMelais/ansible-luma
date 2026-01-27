@@ -128,8 +128,8 @@
 
     - name: Déployer la datasource Loki via template
       template:
-        src: grafana/provisioning/datasources/loki.yml.j2
-        dest: /etc/grafana/provisioning/datasources/loki.yml
+        src: grafana/provisioning/datasources/loki.yaml.j2
+        dest: /etc/grafana/provisioning/datasources/loki.yaml
         owner: grafana
         group: grafana
         mode: '0644'
