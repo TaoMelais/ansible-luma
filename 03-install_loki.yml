@@ -42,7 +42,7 @@
 
     - name: Télécharger Loki archive
       get_url:
-        url: "https://github.com/grafana/loki/releases/download/v{{ loki_version }}/loki-{{ loki_version }}.linux-amd64.zip"
+        url: "https://github.com/grafana/loki/releases/download/v{{ loki_version }}/loki-linux-amd64.zip"
         dest: "/tmp/loki-{{ loki_version }}.zip"
         mode: '0644'
 
@@ -52,14 +52,26 @@
         dest: /opt
         remote_src: yes
 
-    - name: Installer binaire Loki
+    - name: Chercher le binaire Loki extrait
+      command: find /opt -type f \( -name 'loki' -o -name 'loki*' \) -print -quit
+      register: loki_find
+      changed_when: false
+      failed_when: false
+
+    - name: Vérifier que le binaire Loki a été trouvé
+      fail:
+        msg: "Binaire Loki introuvable dans /opt après extraction. Contenu de /opt: {{ lookup('pipe','ls -la /opt') }}"
+      when: loki_find.stdout == ""
+
+    - name: Copier binaire Loki vers /usr/local/bin
       copy:
         remote_src: yes
-        src: "/opt/loki-{{ loki_version }}.linux-amd64/loki"
+        src: "{{ loki_find.stdout }}"
         dest: /usr/local/bin/loki
         owner: root
         group: root
         mode: '0755'
+      when: loki_find.stdout != ""
 
     - name: Copier configuration Loki
       copy:
