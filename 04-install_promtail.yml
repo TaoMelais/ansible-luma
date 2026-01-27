@@ -1,6 +1,6 @@
 ---
 - name: Installer Promtail sur container Proxmox
-  hosts: loki_container
+  hosts: promtail_container
   become: yes
 
   tasks:
