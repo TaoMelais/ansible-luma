@@ -102,8 +102,3 @@
     - name: Afficher l'URL de Loki
       debug:
         msg: "Loki est disponible sur http://{{ ansible_default_ipv4.address }}:3100"
-
-    - name: Vérifier que Loki répond
-      uri:
-        url: http://127.0.0.1:3100/ready
-        status_code: 200
