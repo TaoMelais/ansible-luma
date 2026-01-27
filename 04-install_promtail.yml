@@ -2,9 +2,8 @@
 - name: Installer Promtail sur container Proxmox
   hosts: loki_container
   become: yes
-  vars_files:
-    - promtail/vars.yml
 
+  tasks:
 
     - name: Télécharger promtail archive
       get_url:
