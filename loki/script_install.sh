@@ -1,5 +1,5 @@
 # Installation des dépendances
-apt install -y sudo wget gnupg lsb-release git locales python3 python3-pip python3-venv ansible
+apt install -y sudo wget gnupg lsb-release git locales python3 python3-pip python3-venv ansible unzip
 
 # Configuration de la locale
 sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
