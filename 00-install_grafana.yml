@@ -115,7 +115,7 @@
         dest: /etc/grafana/grafana.ini
         owner: grafana
         group: grafana
-        mode: '0640'
+        mode: '0644'
       notify: Redémarrer Grafana
 
     - name: Configurer Grafana avec les variables d'environnement
@@ -150,6 +150,21 @@
         line: "{{ item.key }}={{ item.value }}"
         create: yes
       loop: "{{ grafana_env_vars | dict2items }}"
+      notify: Redémarrer Grafana
+
+    - name: Définir CONF_FILE et chemins utilisés par le service Grafana
+      lineinfile:
+        path: /etc/default/grafana-server
+        regexp: "^{{ item.key }}="
+        line: "{{ item.key }}={{ item.value }}"
+        create: yes
+      loop:
+        - { key: 'CONF_FILE', value: '/etc/grafana/grafana.ini' }
+        - { key: 'DATA_DIR', value: '/var/lib/grafana' }
+        - { key: 'LOG_DIR', value: '/var/log/grafana' }
+        - { key: 'PLUGINS_DIR', value: '/var/lib/grafana/plugins' }
+        - { key: 'PROVISIONING_CFG_DIR', value: '/etc/grafana/provisioning' }
+        - { key: 'PID_FILE_DIR', value: '/var/run/grafana' }
       notify: Redémarrer Grafana
 
     - name: Activer et démarrer le service Grafana
