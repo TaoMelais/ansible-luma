@@ -118,6 +118,23 @@
         mode: '0644'
       notify: Redémarrer Grafana
 
+    - name: Créer le répertoire de provisioning datasources
+      file:
+        path: /etc/grafana/provisioning/datasources
+        state: directory
+        owner: grafana
+        group: grafana
+        mode: '0755'
+
+    - name: Déployer la datasource Loki via template
+      template:
+        src: grafana/provisioning/datasources/loki.yml.j2
+        dest: /etc/grafana/provisioning/datasources/loki.yml
+        owner: grafana
+        group: grafana
+        mode: '0644'
+      notify: Redémarrer Grafana
+
     - name: Configurer Grafana avec les variables d'environnement
       lineinfile:
         path: /etc/default/grafana-server

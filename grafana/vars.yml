@@ -16,3 +16,6 @@ grafana_env_vars:
   GF_ANALYTICS_REPORTING_ENABLED: "false"
   GF_SECURITY_DISABLE_GRAVATAR: "true"
 
+# URL du datasource Loki (modifiable selon votre déploiement)
+grafana_loki_url: "http://172.16.1.57:3100"
+
