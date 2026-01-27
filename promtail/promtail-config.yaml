@@ -9,17 +9,11 @@ clients:
   - url: http://172.16.1.57:3100/loki/api/v1/push
 
 scrape_configs:
-  - job_name: pfsense-syslog
-    syslog:
-      listen_address: 0.0.0.0:1514
-      idle_timeout: 60s
-      label_structured_data: yes
-    relabel_configs:
-      - source_labels: ['__syslog_message_hostname']
-        target_label: 'hostname'
+  - job_name: system
     static_configs:
       - targets:
           - localhost
         labels:
-          job: pfsense
-          host: 172.16.1.1
+          job: varlogs
+          host: "{{ ansible_hostname }}"
+          __path__: /var/log/**/*.log
