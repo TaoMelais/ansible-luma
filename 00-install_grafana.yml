@@ -118,6 +118,17 @@
         mode: '0640'
       notify: Redémarrer Grafana
 
+    - name: Copier les fichiers de provisioning
+      copy:
+        src: grafana/provisioning/
+        dest: /etc/grafana/provisioning/
+        owner: grafana
+        group: grafana
+        mode: '0640'
+        recurse: yes
+      notify: Redémarrer Grafana
+    
+
     - name: Configurer Grafana avec les variables d'environnement
       lineinfile:
         path: /etc/default/grafana-server
