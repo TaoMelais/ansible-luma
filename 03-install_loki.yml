@@ -56,7 +56,9 @@
       loop:
         - /etc/loki
         - /var/lib/loki
-      become: yes
+        - /var/lib/loki/chunks
+        - /var/lib/loki/rules
+
 
     - name: Copier la configuration Loki
       copy:
@@ -80,7 +82,7 @@
 
     - name: Recharger la configuration systemd
       systemd:
-        daemon_reexec: yes
+        daemon_reload: yes
       become: yes
 
     - name: Activer et démarrer le service Loki
@@ -99,4 +101,9 @@
 
     - name: Afficher l'URL de Loki
       debug:
-        msg: "Loki est disponible sur http://{{ ansible_eth0.ipv4.address }}:3100"
+        msg: "Loki est disponible sur http://{{ ansible_default_ipv4.address }}:3100"
+
+    - name: Vérifier que Loki répond
+      uri:
+        url: http://127.0.0.1:3100/ready
+        status_code: 200
