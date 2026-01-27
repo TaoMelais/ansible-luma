@@ -15,99 +15,95 @@
     - name: Installer dépendances
       apt:
         name:
+          - sudo
           - wget
           - unzip
-          - ca-certificates
         state: present
       when: ansible_os_family == 'Debian'
 
-    - name: Créer utilisateur système Loki
-      user:
-        name: "{{ loki_user }}"
-        system: yes
-        create_home: no
-        shell: /sbin/nologin
-
-    - name: Créer répertoires Loki
-      file:
-        path: "{{ item }}"
-        state: directory
-        owner: "{{ loki_user }}"
-        group: "{{ loki_group }}"
-        mode: '0755'
-      loop:
-        - "{{ loki_config_dir }}"
-        - "{{ loki_data_dir }}"
-        - "{{ loki_log_dir }}"
 
     - name: Télécharger Loki archive
       get_url:
-        url: "https://github.com/grafana/loki/releases/download/v{{ loki_version }}/loki-linux-amd64.zip"
-        dest: "/tmp/loki-{{ loki_version }}.zip"
+        url: "https://github.com/grafana/loki/releases/latest/download/loki-linux-amd64.zip"
+        dest: "/opt/loki-linux-amd64.zip"
         mode: '0644'
 
     - name: Décompresser Loki
       unarchive:
-        src: "/tmp/loki-{{ loki_version }}.zip"
+        src: "/opt/loki-linux-amd64.zip"
         dest: /opt
         remote_src: yes
 
-    - name: Chercher le binaire Loki extrait
-      command: find /opt -type f \( -name 'loki' -o -name 'loki*' \) -print -quit
-      register: loki_find
-      changed_when: false
-      failed_when: false
+    - name: Rendre Loki exécutable
+      file:
+        path: /opt/loki-linux-amd64
+        mode: '0755'
+      become: yes
 
-    - name: Vérifier que le binaire Loki a été trouvé
-      fail:
-        msg: "Binaire Loki introuvable dans /opt après extraction. Contenu de /opt: {{ lookup('pipe','ls -la /opt') }}"
-      when: loki_find.stdout == ""
+    - name: Déplacer Loki vers /usr/local/bin
+      command: mv /opt/loki-linux-amd64 /usr/local/bin/loki
+      args:
+        creates: /usr/local/bin/loki
+      become: yes
 
-    - name: Copier binaire Loki vers /usr/local/bin
-      copy:
-        remote_src: yes
-        src: "{{ loki_find.stdout }}"
-        dest: /usr/local/bin/loki
+    - name: Créer répertoires pour Loki
+      file:
+        path: "{{ item }}"
+        state: directory
         owner: root
         group: root
         mode: '0755'
-      when: loki_find.stdout != ""
+      loop:
+        - /etc/loki
+        - /var/lib/loki
+      become: yes
 
-    - name: Copier configuration Loki
+    - name: Copier la configuration Loki
       copy:
         src: loki/loki-config.yaml
-        dest: "{{ loki_config_dir }}/loki-config.yaml"
-        owner: "{{ loki_user }}"
-        group: "{{ loki_group }}"
+        dest: /etc/loki/loki-config.yaml
+        owner: root
+        group: root
         mode: '0644'
-      notify: Reload systemd
+        backup: yes
+      become: yes
 
-    - name: Copier unité systemd Loki
+    - name: Copier la configuration Loki service
       copy:
         src: loki/loki.service
         dest: /etc/systemd/system/loki.service
         owner: root
         group: root
         mode: '0644'
-      notify: Reload systemd
+        backup: yes
+      become: yes
 
-    - name: Activer et démarrer Loki
+    - name: Recharger la configuration systemd
+      systemd:
+        daemon_reexec: yes
+      become: yes
+
+    - name: Activer et démarrer le service Loki
       systemd:
         name: loki
         enabled: yes
         state: started
-        daemon_reload: yes
+      become: yes
 
-    - name: Attendre que Loki écoute sur le port 3100
+    - name: Attendre que Loki réponde
       wait_for:
         port: 3100
-        delay: 3
-        timeout: 30
+        host: "{{ ansible_host }}"
+        timeout: 60
+        delay: 5
 
-    - name: Afficher URL Loki
+    - name: Afficher l'URL de Loki
       debug:
-        msg: "Loki accessible sur http://{{ ansible_host | default(inventory_hostname) }}:3100"
+        msg: "Loki est disponible sur http://{{ ansible_host }}:3100"
 
-  handlers:
-    - name: Reload systemd
-      command: systemctl daemon-reload
+
+
+
+
+
+   
