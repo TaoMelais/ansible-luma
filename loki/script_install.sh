@@ -1,3 +1,6 @@
+apt update
+apt upgrade -y
+
 # Installation des dépendances
 apt install -y sudo wget gnupg lsb-release git locales python3 python3-pip python3-venv ansible unzip
 

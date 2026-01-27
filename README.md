@@ -1,31 +1,28 @@
 # Installation Grafana sur Container Proxmox
 
 ```shell
-apt update
-apt upgrade -y
-apt install curl -y
-curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/tags/v0.0.2/grafana/script_install.sh
-. script_install.sh
+wget -qO- https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/heads/main/grafana/script_install.sh | sh
 ```
-
 
 # Installation Prometheus sur Container Proxmox
 
 ```shell
-apt update
-apt upgrade -y
-apt install curl -y
-curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/tags/v0.0.2/prometheus/script_install.sh
-. script_install.sh
+wget -qO- https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/heads/main/prometheus/script_install.sh | sh
 ```
 
 # Installation Loki sur Container Proxmox
 
 ```shell
+wget -qO- https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/heads/main/loki/script_install.sh | sh
+```
+
+# Installation Promtail sur Container Proxmox
+
+```shell
 apt update
 apt upgrade -y
 apt install curl -y
-curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/heads/main/loki/script_install.sh
+curl -o script_install.sh https://raw.githubusercontent.com/TaoMelais/ansible-luma/refs/heads/main/promtail/script_install.sh
 . script_install.sh
 ```
 
