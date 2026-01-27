@@ -1,0 +1,75 @@
+---
+- name: Installer Promtail sur container Proxmox
+  hosts: loki_container
+  become: yes
+  vars_files:
+    - promtail/vars.yml
+
+
+    - name: Télécharger promtail archive
+      get_url:
+        url: "https://github.com/grafana/loki/releases/latest/download/promtail-linux-amd64.zip"
+        dest: "/opt/promtail-linux-amd64.zip"
+        mode: '0644'
+
+    - name: Décompresser promtail
+      unarchive:
+        src: "/opt/promtail-linux-amd64.zip"
+        dest: /opt
+        remote_src: yes
+
+    - name: Rendre promtail exécutable
+      file:
+        path: /opt/promtail-linux-amd64
+        mode: '0755'
+      become: yes
+
+    - name: Déplacer promtail vers /usr/local/bin
+      command: mv /opt/promtail-linux-amd64 /usr/local/bin/promtail
+      args:
+        creates: /usr/local/bin/promtail
+      become: yes
+
+    - name: Créer répertoires pour promtail
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - /etc/promtail
+        - /var/lib/promtail
+      become: yes
+
+    - name: Copier la configuration promtail
+      copy:
+        src: promtail/promtail-config.yaml
+        dest: /etc/promtail/promtail-config.yaml
+        owner: root
+        group: root
+        mode: '0644'
+        backup: yes
+      become: yes
+
+    - name: Copier la configuration promtail service
+      copy:
+        src: promtail/promtail.service
+        dest: /etc/systemd/system/promtail.service
+        owner: root
+        group: root
+        mode: '0644'
+        backup: yes
+      become: yes
+
+    - name: Recharger la configuration systemd
+      systemd:
+        daemon_reexec: yes
+      become: yes
+
+    - name: Activer et démarrer le service promtail
+      systemd:
+        name: promtail
+        enabled: yes
+        state: started
+      become: yes
