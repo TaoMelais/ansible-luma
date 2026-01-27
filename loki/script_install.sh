@@ -32,21 +32,5 @@ echo ""
 echo "=== Vérification du port 3100 ==="
 ss -tlnp | grep 3100 || echo "⚠️ Port 3100 not listening"
 echo ""
-echo "=== Derniers logs Grafana ==="
-journalctl -u grafana-server -n 20 --no-pager
-
-
-ansible-playbook 04-install_promtail.yml
-
-echo "=== Vérification de Promtail ==="
-sleep 5
-systemctl status promtail || echo "⚠️ Promtail not running"
-echo ""
-echo "=== Vérification du port 9080 ==="
-ss -tlnp | grep 9080 || echo "⚠️ Port 908
-0 not listening"
-echo ""
-echo "=== Derniers logs Promtail ==="
-journalctl -u promtail -n 20 --no-pager
-deactivate
-echo "Installation de Loki et Promtail terminée."
+echo "=== Derniers logs Loki ==="
+journalctl -u loki -n 20 --no-pager
