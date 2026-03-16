@@ -17,9 +17,9 @@ datasources:
 {% endif %}
 {% if item.json_data is defined %}
     jsonData:
-{{ item.json_data | to_nice_yaml | indent(6) }}
+{{ item.json_data | to_nice_yaml | indent(6, True) }}
 {% endif %}
 {% if item.secure_json_data is defined %}
     secureJsonData:
-{{ item.secure_json_data | to_nice_yaml | indent(6) }}
+{{ item.secure_json_data | to_nice_yaml | indent(6, True) }}
 {% endif %}
