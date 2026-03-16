@@ -9,11 +9,55 @@ clients:
   - url: http://172.16.1.57:3100/loki/api/v1/push
 
 scrape_configs:
+  # ======================
+  # Logs système locaux
+  # ======================
   - job_name: system
     static_configs:
       - targets:
           - localhost
         labels:
           job: varlogs
-          host: "{{ ansible_hostname }}"
+          host: promtail
           __path__: /var/log/**/*.log
+
+  # ======================
+  # Logs pfSense (syslog)
+  # ======================
+  - job_name: pfsense
+    syslog:
+      listen_address: 0.0.0.0:1514
+      listen_protocol: udp
+      labels:
+        job: pfsense
+        source: syslog
+
+    # --------
+    # Labels syslog standards
+    # --------
+    relabel_configs:
+      - source_labels: ['__syslog_message_hostname']
+        target_label: host
+
+      - source_labels: ['__syslog_message_app_name']
+        target_label: app
+
+      - source_labels: ['__syslog_message_severity']
+        target_label: severity
+
+    # --------
+    # Pipeline pfSense
+    # --------
+    pipeline_stages:
+      - match:
+          selector: '{app="logportalauth"}'
+          stages:
+            - regex:
+                expression: 'Zone: (?P<zone>[^ ]+) - (?P<action>ACCEPT|REJECT): (?P<user>[^,]+), (?P<mac>([0-9a-f]{2}:){5}[0-9a-f]{2}), (?P<ip>[0-9.]+)'
+            - labels:
+                zone:
+                action:
+                user:
+                mac:
+                ip:
+
