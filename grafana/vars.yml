@@ -28,7 +28,7 @@ grafana_datasources:
   - name: "Prometheus"
     type: "prometheus"
     access: "proxy"
-    url: "http://localhost:9090"
+    url: "http://172.16.1.56:9090"
     is_default: true
     enabled: true
     json_data:
@@ -39,9 +39,9 @@ grafana_datasources:
   - name: "Loki"
     type: "loki"
     access: "proxy"
-    url: "http://localhost:3100"
+    url: "http://172.16.1.57:3100"
     is_default: false
-    enabled: false
+    enabled: true
     json_data:
       maxLines: 1000
 
