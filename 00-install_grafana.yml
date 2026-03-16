@@ -188,7 +188,7 @@
         status_code: 200
         return_content: yes
         user: "{{ grafana_admin_user }}"
-        password: "{{ grafana_admin_password }}"
+        password: "{{ grafana_admin_user }}"
         force_basic_auth: yes
       register: grafana_health
       retries: 10
@@ -200,7 +200,7 @@
         url: "http://{{ grafana_ip }}:{{ grafana_port }}/api/datasources/name/{{ item.name }}"
         method: GET
         user: "{{ grafana_admin_user }}"
-        password: "{{ grafana_admin_password }}"
+        password: "{{ grafana_admin_user }}"
         force_basic_auth: yes
         return_content: yes
         status_code: 200,404
@@ -220,7 +220,7 @@
           {% endif %}
         method: "{{ 'PUT' if ds_get.results[ds_index].status == 200 else 'POST' }}"
         user: "{{ grafana_admin_user }}"
-        password: "{{ grafana_admin_password }}"
+        password: "{{ grafana_admin_user }}"
         force_basic_auth: yes
         headers:
           Content-Type: "application/json"
@@ -252,7 +252,7 @@
         url: "http://{{ grafana_ip }}:{{ grafana_port }}/api/datasources"
         method: GET
         user: "{{ grafana_admin_user }}"
-        password: "{{ grafana_admin_password }}"
+        password: "{{ grafana_admin_user }}"
         force_basic_auth: true
         return_content: true
       register: loaded_datasources
@@ -265,6 +265,54 @@
         msg:
           - "Grafana est accessible sur http://{{ grafana_ip }}:{{ grafana_port }}"
           - "Datasources chargées : {{ loaded_datasources.json | map(attribute='name') | list }}"
+
+    # ============================================================
+    # Changer le mot de passe admin via l'API Grafana
+    # Tentative avec le mot de passe désiré, puis avec 'admin' si nécessaire
+    # ============================================================
+    - name: Récupérer l'ID de l'utilisateur admin en s'authentifiant avec le mot de passe initial
+      uri:
+        url: "http://{{ grafana_ip }}:{{ grafana_port }}/api/users/lookup?loginOrEmail={{ grafana_admin_user }}"
+        method: GET
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_user }}"
+        force_basic_auth: yes
+        return_content: yes
+        status_code: 200
+      register: grafana_lookup
+
+    - name: Échouer si impossible de s'authentifier à l'API Grafana avec le mot de passe initial
+      fail:
+        msg: "Impossible d'authentifier sur l'API Grafana avec le mot de passe initial (utilisé temporairement)."
+      when: grafana_lookup.status != 200
+
+    - name: Récupérer l'ID utilisateur admin depuis la réponse
+      set_fact:
+        grafana_admin_id: "{{ grafana_lookup.json.id }}"
+
+    - name: Définir le mot de passe courant utilisé pour l'auth (mot de passe initial)
+      set_fact:
+        grafana_admin_current_password: "{{ grafana_admin_user }}"
+
+    - name: Changer le mot de passe de l'utilisateur admin via l'API Grafana
+      uri:
+        url: "http://{{ grafana_ip }}:{{ grafana_port }}/api/admin/users/{{ grafana_admin_id }}/password"
+        method: PUT
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_current_password }}"
+        force_basic_auth: yes
+        headers:
+          Content-Type: "application/json"
+        body: "{{ {'password': grafana_admin_password} | to_json }}"
+        status_code: 200,204
+        return_content: yes
+      register: grafana_change_admin_password
+      when: grafana_admin_current_password is defined and grafana_admin_current_password != grafana_admin_password
+
+    - name: Afficher le résultat du changement de mot de passe
+      debug:
+        msg: "Changement de mot de passe admin effectué (statut={{ grafana_change_admin_password.status }})."
+      when: grafana_change_admin_password is defined
 
   handlers:
     - name: Redémarrer Grafana
