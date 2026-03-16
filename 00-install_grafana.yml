@@ -208,16 +208,17 @@
       loop: "{{ grafana_datasources }}"
       loop_control:
         label: "{{ item.name }}"
+        index_var: ds_index
 
     - name: Créer ou mettre à jour la datasource via l'API Grafana
       uri:
         url: >-
-          {% if ds_get.results[ansible_loop.index0].status == 200 %}
-          http://{{ grafana_ip }}:{{ grafana_port }}/api/datasources/{{ ds_get.results[ansible_loop.index0].json.id }}
+          {% if ds_get.results[ds_index].status == 200 %}
+          http://{{ grafana_ip }}:{{ grafana_port }}/api/datasources/{{ ds_get.results[ds_index].json.id }}
           {% else %}
           http://{{ grafana_ip }}:{{ grafana_port }}/api/datasources
           {% endif %}
-        method: "{{ 'PUT' if ds_get.results[ansible_loop.index0].status == 200 else 'POST' }}"
+        method: "{{ 'PUT' if ds_get.results[ds_index].status == 200 else 'POST' }}"
         user: "{{ grafana_admin_user }}"
         password: "{{ grafana_admin_password }}"
         force_basic_auth: yes
@@ -237,6 +238,7 @@
       loop: "{{ grafana_datasources }}"
       loop_control:
         label: "{{ item.name }}"
+        index_var: ds_index
 
     - name: Attendre que Grafana réponde après reload
       wait_for:
