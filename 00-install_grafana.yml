@@ -173,29 +173,70 @@
         owner: grafana
         group: grafana
         mode: '0755'
-
-    - name: Déployer les fichiers de provisioning des datasources activées
-      template:
-        src: grafana/datasource.yml.j2
-        dest: "/etc/grafana/provisioning/datasources/{{ item.name | lower | replace(' ', '_') }}.yml"
-        owner: grafana
-        group: grafana
-        mode: '0640'
-      loop: "{{ grafana_datasources }}"
-      when: item.enabled | default(false)
-      loop_control:
-        label: "{{ item.name }}"
-      notify: Redémarrer Grafana
-
-    - name: Supprimer les fichiers des datasources désactivées
+    - name: Supprimer les fichiers de provisioning YAML générés (éviter conflit avec API)
       file:
         path: "/etc/grafana/provisioning/datasources/{{ item.name | lower | replace(' ', '_') }}.yml"
         state: absent
       loop: "{{ grafana_datasources }}"
-      when: not (item.enabled | default(false))
       loop_control:
         label: "{{ item.name }}"
-      notify: Redémarrer Grafana
+
+    - name: Attendre que Grafana API soit prête
+      uri:
+        url: "http://{{ grafana_ip }}:{{ grafana_port }}/api/health"
+        method: GET
+        status_code: 200
+        return_content: yes
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: yes
+      register: grafana_health
+      retries: 10
+      delay: 3
+      until: grafana_health.status == 200
+
+    - name: Récupérer les datasources existantes (par nom)
+      uri:
+        url: "http://{{ grafana_ip }}:{{ grafana_port }}/api/datasources/name/{{ item.name }}"
+        method: GET
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: yes
+        return_content: yes
+        status_code: 200,404
+      register: ds_get
+      loop: "{{ grafana_datasources }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Créer ou mettre à jour la datasource via l'API Grafana
+      uri:
+        url: >-
+          {% if ds_get.results[loop.index0].status == 200 %}
+          http://{{ grafana_ip }}:{{ grafana_port }}/api/datasources/{{ ds_get.results[loop.index0].json.id }}
+          {% else %}
+          http://{{ grafana_ip }}:{{ grafana_port }}/api/datasources
+          {% endif %}
+        method: "{{ 'PUT' if ds_get.results[loop.index0].status == 200 else 'POST' }}"
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: yes
+        headers:
+          Content-Type: "application/json"
+        body: >-
+          {{ ({
+               'name': item.name,
+               'type': item.type,
+               'access': item.access | default('proxy'),
+               'url': item.url,
+               'isDefault': item.is_default | default(false),
+               'jsonData': item.json_data | default({}),
+               'secureJsonData': item.secure_json_data | default({})
+             }) | to_json }}
+        status_code: 200,201
+      loop: "{{ grafana_datasources }}"
+      loop_control:
+        label: "{{ item.name }}"
 
     - name: Attendre que Grafana réponde après reload
       wait_for:
