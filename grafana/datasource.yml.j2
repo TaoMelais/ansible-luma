@@ -1,0 +1,29 @@
+# Fichier généré par Ansible — ne pas modifier manuellement
+# Datasource : {{ item.name }}
+apiVersion: 1
+
+datasources:
+  - name: "{{ item.name }}"
+    type: "{{ item.type }}"
+    access: "{{ item.access | default('proxy') }}"
+    url: "{{ item.url }}"
+    isDefault: {{ item.is_default | default(false) | lower }}
+    editable: false
+{% if item.database is defined %}
+    database: "{{ item.database }}"
+{% endif %}
+{% if item.user is defined %}
+    user: "{{ item.user }}"
+{% endif %}
+{% if item.json_data is defined %}
+    jsonData:
+{% for key, value in item.json_data.items() %}
+      {{ key }}: {{ value | to_nice_yaml | trim }}
+{% endfor %}
+{% endif %}
+{% if item.secure_json_data is defined %}
+    secureJsonData:
+{% for key, value in item.secure_json_data.items() %}
+      {{ key }}: "{{ value }}"
+{% endfor %}
+{% endif %}

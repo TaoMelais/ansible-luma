@@ -1,11 +1,15 @@
 ---
-- name: Installer Grafana sur container Proxmox
+- name: Installer et configurer Grafana sur container Proxmox
   hosts: grafana_container
   become: yes
   vars_files:
     - grafana/vars.yml
-    
+
   tasks:
+
+    # ============================================================
+    # Installation de Grafana
+    # ============================================================
     - name: Mettre à jour le cache APT
       apt:
         update_cache: yes
@@ -45,7 +49,6 @@
 
     - name: Corriger les permissions et la configuration Grafana pour LXC/Docker
       shell: |
-        # Créer les répertoires nécessaires avec les bonnes permissions
         mkdir -p /var/lib/grafana
         mkdir -p /var/log/grafana
         mkdir -p /etc/grafana/provisioning
@@ -105,9 +108,9 @@
         line: "{{ item.line }}"
         create: yes
       loop:
-        - { regexp: '^GF_SECURITY_ADMIN_USER=', line: 'GF_SECURITY_ADMIN_USER="{{ grafana_admin_user }}"' }
-        - { regexp: '^GF_SECURITY_ADMIN_PASSWORD=', line: 'GF_SECURITY_ADMIN_PASSWORD="{{ grafana_admin_password }}"' }
-        - { regexp: '^GF_SERVER_HTTP_PORT=', line: 'GF_SERVER_HTTP_PORT="{{ grafana_port }}"' }
+        - { regexp: '^GF_SECURITY_ADMIN_USER=',     line: 'GF_SECURITY_ADMIN_USER="{{ grafana_admin_user }}"' }
+        - { regexp: '^GF_SECURITY_ADMIN_PASSWORD=',  line: 'GF_SECURITY_ADMIN_PASSWORD="{{ grafana_admin_password }}"' }
+        - { regexp: '^GF_SERVER_HTTP_PORT=',          line: 'GF_SERVER_HTTP_PORT="{{ grafana_port }}"' }
       notify: Redémarrer Grafana
 
     - name: Ajouter les variables d'environnement dans le fichier systemd
@@ -116,12 +119,6 @@
         regexp: "^EnvironmentFile="
         line: "EnvironmentFile=/etc/default/grafana-server"
         create: yes
-
-    - name: Redémarrer systemd pour charger les nouvelles variables
-      shell: |
-        systemctl daemon-reload
-        systemctl restart grafana-server
-      notify: Redémarrer Grafana
 
     - name: Configurer les variables d'environnement supplémentaires
       lineinfile:
@@ -139,13 +136,18 @@
         line: "{{ item.key }}={{ item.value }}"
         create: yes
       loop:
-        - { key: 'CONF_FILE', value: '/etc/grafana/grafana.ini' }
-        - { key: 'DATA_DIR', value: '/var/lib/grafana' }
-        - { key: 'LOG_DIR', value: '/var/log/grafana' }
-        - { key: 'PLUGINS_DIR', value: '/var/lib/grafana/plugins' }
+        - { key: 'CONF_FILE',            value: '/etc/grafana/grafana.ini' }
+        - { key: 'DATA_DIR',             value: '/var/lib/grafana' }
+        - { key: 'LOG_DIR',              value: '/var/log/grafana' }
+        - { key: 'PLUGINS_DIR',          value: '/var/lib/grafana/plugins' }
         - { key: 'PROVISIONING_CFG_DIR', value: '/etc/grafana/provisioning' }
-        - { key: 'PID_FILE_DIR', value: '/var/run/grafana' }
+        - { key: 'PID_FILE_DIR',         value: '/var/run/grafana' }
       notify: Redémarrer Grafana
+
+    - name: Redémarrer systemd pour charger les nouvelles variables
+      shell: |
+        systemctl daemon-reload
+        systemctl restart grafana-server
 
     - name: Activer et démarrer le service Grafana
       systemd:
@@ -161,12 +163,69 @@
         delay: 5
         timeout: 60
 
-    - name: Afficher l'URL de Grafana
+    # ============================================================
+    # Provisioning des datasources
+    # ============================================================
+    - name: Créer le répertoire de provisioning datasources
+      file:
+        path: /etc/grafana/provisioning/datasources
+        state: directory
+        owner: grafana
+        group: grafana
+        mode: '0755'
+
+    - name: Déployer les fichiers de provisioning des datasources activées
+      template:
+        src: grafana/datasource.yml.j2
+        dest: "/etc/grafana/provisioning/datasources/{{ item.name | lower | replace(' ', '_') }}.yml"
+        owner: grafana
+        group: grafana
+        mode: '0640'
+      loop: "{{ grafana_datasources }}"
+      when: item.enabled | default(false)
+      loop_control:
+        label: "{{ item.name }}"
+      notify: Redémarrer Grafana
+
+    - name: Supprimer les fichiers des datasources désactivées
+      file:
+        path: "/etc/grafana/provisioning/datasources/{{ item.name | lower | replace(' ', '_') }}.yml"
+        state: absent
+      loop: "{{ grafana_datasources }}"
+      when: not (item.enabled | default(false))
+      loop_control:
+        label: "{{ item.name }}"
+      notify: Redémarrer Grafana
+
+    - name: Attendre que Grafana réponde après reload
+      wait_for:
+        host: "{{ grafana_ip }}"
+        port: "{{ grafana_port }}"
+        delay: 3
+        timeout: 60
+
+    - name: Vérifier les datasources chargées via l'API Grafana
+      uri:
+        url: "http://{{ grafana_ip }}:{{ grafana_port }}/api/datasources"
+        method: GET
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: true
+        return_content: true
+      register: loaded_datasources
+      retries: 5
+      delay: 5
+      until: loaded_datasources.status == 200
+
+    - name: Afficher l'URL de Grafana et les datasources actives
       debug:
-        msg: "Grafana est accessible sur http://{{ grafana_ip }}:{{ grafana_port }}"
+        msg:
+          - "Grafana est accessible sur http://{{ grafana_ip }}:{{ grafana_port }}"
+          - "Datasources chargées : {{ loaded_datasources.json | map(attribute='name') | list }}"
 
   handlers:
     - name: Redémarrer Grafana
       systemd:
         name: grafana-server
         state: restarted
+        daemon_reload: yes

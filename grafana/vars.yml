@@ -1,10 +1,12 @@
 ---
+# ============================================================
 # Variables Grafana
+# ============================================================
 grafana_version: "latest"
-grafana_ip: "172.16.1.55"  # IP du container/machine Grafana
+grafana_ip: "172.16.1.55"
 grafana_port: 3000
 grafana_admin_user: "admin"
-grafana_admin_password: "Admin123$"
+grafana_admin_password: "{{ vault_grafana_admin_password }}"  # Stocker dans ansible-vault
 
 # Variables d'environnement supplémentaires pour Grafana
 grafana_env_vars:
@@ -15,4 +17,36 @@ grafana_env_vars:
   GF_DATABASE_TYPE: "sqlite3"
   GF_ANALYTICS_REPORTING_ENABLED: "false"
   GF_SECURITY_DISABLE_GRAVATAR: "true"
+
+# ============================================================
+# Datasources Grafana
+# Décommenter / adapter selon vos besoins
+# ============================================================
+grafana_datasources:
+
+  # --- Prometheus (scraping métriques) ---
+  - name: "Prometheus"
+    type: "prometheus"
+    access: "proxy"
+    url: "http://localhost:9090"
+    is_default: true
+    enabled: true
+    json_data:
+      httpMethod: "POST"
+      timeInterval: "15s"
+
+  # --- Loki (logs) ---
+  - name: "Loki"
+    type: "loki"
+    access: "proxy"
+    url: "http://localhost:3100"
+    is_default: false
+    enabled: false
+    json_data:
+      maxLines: 1000
+
+
+
+
+
 
