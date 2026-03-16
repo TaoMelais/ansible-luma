@@ -17,13 +17,9 @@ datasources:
 {% endif %}
 {% if item.json_data is defined %}
     jsonData:
-{% for key, value in item.json_data.items() %}
-      {{ key }}: {{ value | to_nice_yaml | trim }}
-{% endfor %}
+{{ item.json_data | to_nice_yaml | indent(6) }}
 {% endif %}
 {% if item.secure_json_data is defined %}
     secureJsonData:
-{% for key, value in item.secure_json_data.items() %}
-      {{ key }}: "{{ value }}"
-{% endfor %}
+{{ item.secure_json_data | to_nice_yaml | indent(6) }}
 {% endif %}
