@@ -7,7 +7,7 @@
 
     - name: Télécharger promtail archive
       get_url:
-        url: "https://github.com/grafana/loki/releases/latest/download/promtail-linux-amd64.zip"
+        url: "https://github.com/grafana/loki/releases/download/v3.6.10/promtail-linux-amd64.zip"
         dest: "/opt/promtail-linux-amd64.zip"
         mode: '0644'
 
