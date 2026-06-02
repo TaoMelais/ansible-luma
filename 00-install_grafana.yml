@@ -380,6 +380,18 @@
       debug:
         msg: "Dashboard importé : http://{{ grafana_ip }}:{{ grafana_port }}{{ dashboard_import.json.importedUrl | default('') }}"
 
+    - name: Définir le dashboard comme page d'accueil
+      uri:
+        url: "http://{{ grafana_ip }}:{{ grafana_port }}/api/org/preferences"
+        method: PUT
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: yes
+        headers:
+          Content-Type: "application/json"
+        body: "{{ {'homeDashboardUID': dashboard_import.json.uid} | to_json }}"
+        status_code: 200
+
   handlers:
     - name: Redémarrer Grafana
       systemd:
