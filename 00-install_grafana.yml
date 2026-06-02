@@ -314,6 +314,72 @@
         msg: "Changement de mot de passe admin effectué (statut={{ grafana_change_admin_password.status }})."
       when: grafana_change_admin_password is defined
 
+    # ============================================================
+    # Import du dashboard Grafana
+    # ============================================================
+    - name: Charger le JSON du dashboard
+      set_fact:
+        dashboard_json: "{{ lookup('file', 'grafana/dashboard.json') | from_json }}"
+
+    - name: Récupérer l'UID de la datasource Prometheus
+      uri:
+        url: "http://{{ grafana_ip }}:{{ grafana_port }}/api/datasources/name/Prometheus"
+        method: GET
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: yes
+        return_content: yes
+        status_code: 200
+      register: prometheus_ds
+
+    - name: Récupérer l'UID de la datasource Loki
+      uri:
+        url: "http://{{ grafana_ip }}:{{ grafana_port }}/api/datasources/name/Loki"
+        method: GET
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: yes
+        return_content: yes
+        status_code: 200
+      register: loki_ds
+
+    - name: Importer le dashboard via l'API Grafana
+      uri:
+        url: "http://{{ grafana_ip }}:{{ grafana_port }}/api/dashboards/import"
+        method: POST
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: yes
+        headers:
+          Content-Type: "application/json"
+        body: >-
+          {{ {
+            'dashboard': dashboard_json,
+            'overwrite': true,
+            'inputs': [
+              {
+                'name': 'DS_PROMETHEUS',
+                'type': 'datasource',
+                'pluginId': 'prometheus',
+                'value': prometheus_ds.json.uid
+              },
+              {
+                'name': 'DS_LOKI',
+                'type': 'datasource',
+                'pluginId': 'loki',
+                'value': loki_ds.json.uid
+              }
+            ],
+            'folderId': 0
+          } | to_json }}
+        status_code: 200
+        return_content: yes
+      register: dashboard_import
+
+    - name: Afficher l'URL du dashboard importé
+      debug:
+        msg: "Dashboard importé : http://{{ grafana_ip }}:{{ grafana_port }}{{ dashboard_import.json.importedUrl | default('') }}"
+
   handlers:
     - name: Redémarrer Grafana
       systemd:
